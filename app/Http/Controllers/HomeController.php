@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Match;
 use App\Models\Team;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Session;
 
@@ -11,17 +12,28 @@ class HomeController extends Controller
 {
     public function index()
     {
-        if (!$this->checkLeagueStart()) {
-            $this->leagueStart();
+        try {
+
+            if (!$this->checkLeagueStart()) {
+                $this->leagueStart();
+            }
+            $league_table = $this->getLeagueTable();
+            $last_match_played = $this->getLastMatchPlayed();
+            $week = 0;
+            if ($last_match_played->count() > 0) {
+                $week = $last_match_played->first()->play_week;
+            }
+            $champion_prediction = $this->getChampionPrediction($league_table, $week);
+
+            return view('home', compact('league_table', 'last_match_played', 'champion_prediction', 'week'));
+        } catch (QueryException $queryException) {
+            report($queryException);
+            abort(500);
+        } catch (\Throwable $throwable) {
+            report($throwable);
+            abort(500);
         }
-        $league_table = $this->getLeagueTable();
-        $last_match_played = $this->getLastMatchPlayed();
-        $week = 0;
-        if ($last_match_played->count() > 0) {
-            $week = $last_match_played->first()->play_week;
-        }
-        $champion_prediction = $this->getChampionPrediction($league_table, $week);
-        return view('home', compact('league_table', 'last_match_played', 'champion_prediction', 'week'));
+
     }
 
     /**
@@ -30,8 +42,13 @@ class HomeController extends Controller
      */
     public function changeLanguage($lang)
     {
-        Session::put(['locale' => $lang]);
-        return redirect()->route('home');
+        try {
+            Session::put(['locale' => $lang]);
+            return redirect()->route('home');
+        } catch (\Throwable $throwable) {
+            report($throwable);
+            abort(500);
+        }
     }
 
     /**
@@ -39,14 +56,22 @@ class HomeController extends Controller
      */
     public function playAll()
     {
-        $bulunulanHafta = Match::where('is_played', 1)->max('play_week') + 1;
-        if ($bulunulanHafta > 6) {
-            return new JsonResponse(['status' => false]);
+        try {
+            $bulunulanHafta = Match::where('is_played', 1)->max('play_week') + 1;
+            if ($bulunulanHafta > 6) {
+                return new JsonResponse(['status' => false]);
+            }
+            for ($x = $bulunulanHafta; $x <= 6; $x++) {
+                $response = $this->nextWeek();
+            }
+            return $response;
+        } catch (QueryException $queryException) {
+            report($queryException);
+            abort(500);
+        } catch (\Throwable $throwable) {
+            report($throwable);
+            abort(500);
         }
-        for ($x = $bulunulanHafta; $x <= 6; $x++) {
-            $response = $this->nextWeek();
-        }
-        return $response;
     }
 
     /**
@@ -54,25 +79,33 @@ class HomeController extends Controller
      */
     public function nextWeek()
     {
-        $matchesOfTheWeek = Match::with(['homeTeam', 'awayTeam'])->where('is_played', 0)->orderBy('play_week', 'asc')->limit(2)->get();
-        foreach ($matchesOfTheWeek as $match) {
-            $match->update([
-                'home_team_goal' => rand(0, 5),
-                'away_team_goal' => rand(0, 5),
-                'is_played' => true
-            ]);
+        try {
+            $matchesOfTheWeek = Match::with(['homeTeam', 'awayTeam'])->where('is_played', 0)->orderBy('play_week', 'asc')->limit(2)->get();
+            foreach ($matchesOfTheWeek as $match) {
+                $match->update([
+                    'home_team_goal' => rand(0, 5),
+                    'away_team_goal' => rand(0, 5),
+                    'is_played' => true
+                ]);
+            }
+
+            $league_table = $this->getLeagueTable();
+            $week = $matchesOfTheWeek->first()->play_week;
+
+            $champion_prediction = $this->getChampionPrediction($league_table, $week);
+
+            return new JsonResponse(['status' => true, 'datas' => [
+                'league_table' => $league_table,
+                'matches_of_the_week' => $matchesOfTheWeek,
+                'champion_prediction' => $champion_prediction
+            ]]);
+        } catch (QueryException $queryException) {
+            report($queryException);
+            abort(500);
+        } catch (\Throwable $throwable) {
+            report($throwable);
+            abort(500);
         }
-
-        $league_table = $this->getLeagueTable();
-        $week = $matchesOfTheWeek->first()->play_week;
-
-        $champion_prediction = $this->getChampionPrediction($league_table, $week);
-
-        return new JsonResponse(['status' => true, 'datas' => [
-            'league_table' => $league_table,
-            'matches_of_the_week' => $matchesOfTheWeek,
-            'champion_prediction' => $champion_prediction
-        ]]);
     }
 
     /**
@@ -80,8 +113,16 @@ class HomeController extends Controller
      */
     public function newLeague()
     {
-        Match::truncate();
-        return redirect()->route('home');
+        try {
+            Match::truncate();
+            return redirect()->route('home');
+        } catch (QueryException $queryException) {
+            report($queryException);
+            abort(500);
+        } catch (\Throwable $throwable) {
+            report($throwable);
+            abort(500);
+        }
     }
 
     /**
@@ -186,6 +227,9 @@ class HomeController extends Controller
     }
 
 
+    /**
+     * @return int
+     */
     private function checkLeagueStart()
     {
         return Match::count();

@@ -13219,6 +13219,8 @@ $("#play_all").click(function () {
     update_champion_prediction(response.datas.champion_prediction);
   }).fail(function () {
     alert('error');
+    $('#next_week').removeClass('disabled');
+    $('#play_all').removeClass('disabled');
   });
 });
 

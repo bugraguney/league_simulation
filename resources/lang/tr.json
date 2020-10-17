@@ -14,5 +14,7 @@
     "No match has been played yet": "Henüz bir maç oynatılmadı",
     "Champion Prediction": "Şampiyan Tahmini",
     "Simulation must be played for at least 4 weeks in order for the system to predict champions.": "Sistemin şampiyon tahmini yapabilmesi için en az 4 hafta smilasyon oynatılmalıdır.",
-    "Week Match Results": "Haftanın Maç Sonuçları"
+    "Week Match Results": "Haftanın Maç Sonuçları",
+    "Unknown Error!": "Bilinmeyen bir hata oluştu!",
+    "Database error in :Title add process.": "Lig kontrol işleminde veritabanı hatası."
 }

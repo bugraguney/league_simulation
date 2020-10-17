@@ -111,5 +111,7 @@ $("#play_all").click(function () {
         })
         .fail(function () {
             alert('error');
+            $('#next_week').removeClass('disabled');
+            $('#play_all').removeClass('disabled');
         });
 });
